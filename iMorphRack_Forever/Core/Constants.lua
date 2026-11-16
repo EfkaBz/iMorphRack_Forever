@@ -65,7 +65,7 @@ ns.SLOTS = {
 -- Catégories d'objet (classe * 100 + sous-classe)
 ns.CATEGORIES = {
     { id = 401, name = "Cloth" }, { id = 402, name = "Leather" }, { id = 403, name = "Mail" },
-    { id = 404, name = "Plate" }, { id = 400, name = "Misc. armor" }, { id = 406, name = "Shield" },
+    { id = 404, name = "Plate" }, { id = 400, name = "Misc. armor" }, { id = 405, name = "Cosmetic" }, { id = 406, name = "Shield" },
     { id = 200, name = "One-handed axe" }, { id = 201, name = "Two-handed axe" },
     { id = 204, name = "One-handed mace" }, { id = 205, name = "Two-handed mace" },
     { id = 207, name = "One-handed sword" }, { id = 208, name = "Two-handed sword" },

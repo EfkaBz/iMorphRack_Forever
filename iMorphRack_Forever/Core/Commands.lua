@@ -28,7 +28,10 @@ local function WatchChat(_, text)
     -- certains messages (combat, instances) sont des "valeurs secrètes" illisibles pour les addons
     if issecretvalue and issecretvalue(text) then return end
     if ns.db and type(text) == "string" and text:find("iMorph") and text:find("loaded") then
+        local wasInjected = ns.IsInjected()
         ns.db.injectedProcess = ProcessStart()
+        -- iMorph vient d'être injecté : on applique ce qui attendait (réapplication auto)
+        if not wasInjected and ns.OnInjected then C_Timer.After(1, ns.OnInjected) end
     end
 end
 for i = 1, NUM_CHAT_WINDOWS or 10 do
@@ -47,13 +50,14 @@ local function SendOne(cmd)
     -- l'addon "iMorph" expose son gestionnaire : on l'appelle directement, sans passer par la barre de chat
     if iMorphChatHandler then
         iMorphChatHandler(cmd)
-        return
+    else
+        local eb = DEFAULT_CHAT_FRAME.editBox or ChatFrame1EditBox
+        eb:SetText(cmd)
+        ChatEdit_SendText(eb, 0)
+        eb:SetText("")
+        if ChatEdit_DeactivateChat then ChatEdit_DeactivateChat(eb) end
     end
-    local eb = DEFAULT_CHAT_FRAME.editBox or ChatFrame1EditBox
-    eb:SetText(cmd)
-    ChatEdit_SendText(eb, 0)
-    eb:SetText("")
-    if ChatEdit_DeactivateChat then ChatEdit_DeactivateChat(eb) end
+    if ns.Track then ns.Track(cmd) end
 end
 
 -- Exécute une ou plusieurs commandes séparées par ";" ou retour à la ligne

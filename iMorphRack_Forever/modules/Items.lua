@@ -1,11 +1,11 @@
 -- iMorph Rack (Forever) : onglet Objets
 local _, ns = ...
 local L, UI = ns.L, ns.UI
-local Button, EditBox, Label, Heading, CommandRow = UI.Button, UI.EditBox, UI.Label, UI.Heading, UI.CommandRow
-local W, COL2 = UI.WIDTH, UI.COL2
+local Button, Heading, CommandRow = UI.Button, UI.Heading, UI.CommandRow
+local COL2 = UI.COL2
 
 local function BuildItemsPage(p)
-    Heading(p, L["Armor"], 0, 0)
+    Heading(p, L["Armor"], 0, 0, COL2 - 24)
     Heading(p, L["Weapons and misc"], COL2, 0)
     local boxes = {}
     local half = math.ceil(#ns.SLOTS / 2)
@@ -19,21 +19,21 @@ local function BuildItemsPage(p)
     ns.itemBoxes = boxes
     local y = -6 - (half + 1) * 30
     Heading(p, L["Weapon enchants"], 0, y)
-    CommandRow(p, 0, y - 30, L["Main hand"], function(v) return ".enchant 1 " .. v end)
-    CommandRow(p, COL2, y - 30, L["Off hand"], function(v) return ".enchant 2 " .. v end)
+    CommandRow(p, 0, y - 36, L["Main hand"], function(v) return ".enchant 1 " .. v end)
+    CommandRow(p, COL2, y - 36, L["Off hand"], function(v) return ".enchant 2 " .. v end)
 
-    Button(p, L["Fill with my gear"], 220, 24, function()
+    Button(p, L["Fill with my gear"], 220, 26, function()
         for id, e in pairs(boxes) do
             local item = GetInventoryItemID("player", id)
             e:SetText(item and tostring(item) or "")
         end
     end):SetPoint("BOTTOMLEFT", 0, 0)
-    Button(p, L["Apply all"], 180, 24, function()
+    Button(p, L["Apply all"], 180, 26, function()
         for _, s in ipairs(ns.SLOTS) do
             local v = strtrim(boxes[s.id]:GetText())
             if v ~= "" then ns.Run(".item " .. s.id .. " " .. v) end
         end
-    end):SetPoint("BOTTOMRIGHT", 0, 0)
+    end, true):SetPoint("BOTTOMRIGHT", 0, 0)
 end
 
 ns.RegisterPage({ key = "items", label = "Items", icon = "INV_Chest_Plate06", build = BuildItemsPage })

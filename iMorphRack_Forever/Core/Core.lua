@@ -7,11 +7,25 @@ f:SetScript("OnEvent", function(_, _, name)
     if name ~= ADDON then return end
     iMorphRackDB = iMorphRackDB or {}
     iMorphRackDB.custom = iMorphRackDB.custom or {}
+    iMorphRackDB.presets = iMorphRackDB.presets or {}
+    iMorphRackDB.chars = iMorphRackDB.chars or {}
     ns.db = iMorphRackDB
     ns.ApplyLanguage(ns.db.lang)
     f:UnregisterEvent("ADDON_LOADED")
 end)
 
+-- /imr : ouvre / ferme   ·   /imr <preset> : applique un preset   ·   /imr reset   ·   /imr bug
 SLASH_IMORPHRACK1 = "/imr"
 SLASH_IMORPHRACK2 = "/imorphrack"
-SlashCmdList.IMORPHRACK = function() ns.Toggle() end
+SlashCmdList.IMORPHRACK = function(msg)
+    msg = strtrim(msg or "")
+    if msg == "" then ns.Toggle() return end
+    if msg:lower() == "reset" then ns.Run(".reset") return end
+    if msg:lower() == "bug" then ns.ReportBug() return end
+    local p = ns.FindPreset(msg)
+    if p then
+        ns.ApplyPreset(p)
+    else
+        print("|cff4fd2ffiMorph Rack|r : " .. format(ns.L["No preset named \"%s\"."], msg))
+    end
+end

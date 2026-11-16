@@ -1,9 +1,9 @@
 ## Interface: 11508, 11509, 11601, 16001
 ## Title: iMorph Rack (Forever)
-## Notes: Interface for iMorph cosmetic commands (race, gender, morph, items, mounts) + custom commands
-## Notes-frFR: Interface pour les commandes cosmétiques iMorph (race, genre, morph, objets, montures) + commandes personnalisées
+## Notes: Interface for iMorph cosmetic commands (race, gender, morph, items, mounts) + custom commands, presets
+## Notes-frFR: Interface pour les commandes cosmétiques iMorph (race, genre, morph, objets, montures) + commandes personnalisées, presets
 ## Author: Daeler
-## Version: 1.0.1
+## Version: 1.1.0
 ## IconTexture: Interface\AddOns\iMorphRack_Forever\media\icon
 ## X-Category: Miscellaneous
 ## Category: Daeler Addons
@@ -16,6 +16,8 @@ Locales\frFR.lua
 # Core
 Core\Constants.lua
 Core\Commands.lua
+Core\Looks.lua
+Core\Skin.lua
 Core\Core.lua
 
 # Data
@@ -28,5 +30,6 @@ modules\Race.lua
 modules\Appearance.lua
 modules\Items.lua
 modules\Database.lua
+modules\Presets.lua
 modules\Custom.lua
 modules\Minimap.lua
