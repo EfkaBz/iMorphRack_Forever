@@ -44,6 +44,7 @@ end
 -- dégradé c1 -> c2, de haut en bas (ou de gauche à droite si horizontal)
 local function gradient(tex, c1, c2, horizontal, keepTexture)
     if not keepTexture then tex:SetTexture(WHITE) end
+    tex._grad = { c1, c2, horizontal }
     tex:SetVertexColor(1, 1, 1, 1)
     local o = horizontal and "HORIZONTAL" or "VERTICAL"
     local a, b = c1, c2
@@ -57,6 +58,25 @@ local function gradient(tex, c1, c2, horizontal, keepTexture)
     tex:SetVertexColor(color(c1))
 end
 S.Gradient = gradient
+
+-- opacité d'une région : sur une texture en dégradé, le jeu ignore SetAlpha (les alphas du
+-- dégradé l'emportent) ; on refait donc le dégradé avec des alphas multipliés
+local function scaled(c, a) return { c[1], c[2], c[3], (c[4] or 1) * a } end
+function S.SetAlpha(region, a)
+    local g = region._grad
+    if g then
+        region._ga = a
+        local c1, c2, h = g[1], g[2], g[3]
+        gradient(region, scaled(c1, a), scaled(c2, a), h, true)
+        region._grad = g -- garde les couleurs d'origine
+    else
+        region:SetAlpha(a)
+    end
+end
+function S.GetAlpha(region)
+    if region._grad then return region._ga or 1 end
+    return region:GetAlpha()
+end
 
 -- Animations ---------------------------------------------------------------------
 local ease = {
@@ -98,8 +118,8 @@ function S.StopTween(key) tweens[key] = nil end
 function S.IsTweening(key) return tweens[key] ~= nil end
 
 function S.FadeTo(region, alpha, dur, done)
-    S.Tween(region, { dur = dur or 0.15, from = region:GetAlpha(), to = alpha,
-        set = function(v) region:SetAlpha(v) end, done = done })
+    S.Tween(region, { dur = dur or 0.15, from = S.GetAlpha(region), to = alpha,
+        set = function(v) S.SetAlpha(region, v) end, done = done })
 end
 
 -- Police (celle du jeu, avec une ombre douce) ------------------------------------
@@ -293,7 +313,7 @@ end
 -- survol doux : une région apparaît / disparaît en fondu
 -- (les appelants posent leurs propres OnEnter / OnLeave avec HookScript)
 function S.HoverFade(frame, region, alpha)
-    region:SetAlpha(0)
+    S.SetAlpha(region, 0)
     frame:HookScript("OnEnter", function() S.FadeTo(region, alpha or 1, 0.12) end)
     frame:HookScript("OnLeave", function() S.FadeTo(region, 0, 0.25) end)
 end
@@ -515,7 +535,7 @@ function S.EditBox(parent, width, height, placeholder)
     local glow = e:CreateTexture(nil, "BORDER", nil, -1)
     glow:SetPoint("TOPLEFT", 1, -1); glow:SetPoint("BOTTOMRIGHT", -1, 1)
     gradient(glow, { 0.3, 0.8, 1, 0 }, { 0.3, 0.8, 1, 0.16 })
-    glow:SetAlpha(0)
+    S.SetAlpha(glow, 0)
 
     e.hint = S.Text(e, 12, "muted")
     e.hint:SetPoint("LEFT", 7, 0)
