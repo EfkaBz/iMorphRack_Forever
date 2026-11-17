@@ -14,10 +14,16 @@ local function SelectTab(key, instant)
     ns.db.tab = key
     for _, tab in ipairs(main.tabs) do
         local active = tab.info.key == key
-        tab.text:SetTextColor(S.Color(active and C.gold or C.text))
-        S.TintBorder(tab, active and C.gold or C.trim, instant and 0.01 or 0.2)
-        tab.borderBase = active and C.gold or C.trim
-        if active then
+        if main.blizz then
+            -- thème Blizzard Forever : onglet icône coché + titre de page à l'encre
+            tab:SetChecked(active)
+            if active then main.pageTitle:SetText(L[tab.info.label]) end
+        else
+            tab.text:SetTextColor(S.Color(active and C.gold or C.text))
+            S.TintBorder(tab, active and C.gold or C.trim, instant and 0.01 or 0.2)
+            tab.borderBase = active and C.gold or C.trim
+        end
+        if active and not main.blizz then
             -- le soulignement glisse sous l'onglet actif
             local to = tab.x
             if instant or not main.indX then
@@ -29,6 +35,8 @@ local function SelectTab(key, instant)
                     main.indicator:SetPoint("TOPLEFT", v, TAB_Y - TAB_H - 3)
                 end })
             end
+        end
+        if active then
             if not tab.page then
                 tab.page = CreateFrame("Frame", nil, main.pageArea)
                 tab.page:SetSize(UI.PAGE_W, UI.PAGE_H)
@@ -105,11 +113,134 @@ local function BuildTabs(f)
     end
 end
 
+-- Thème Blizzard Forever : cadre portrait du jeu, pages du grimoire, onglets icônes -----
+local function atlasExists(name)
+    return C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(name) ~= nil
+end
+
+local function Parchment(f)
+    local left = f:CreateTexture(nil, "BACKGROUND", nil, 2)
+    local right = f:CreateTexture(nil, "BACKGROUND", nil, 2)
+    left:SetPoint("TOPLEFT", 6, -62)
+    left:SetPoint("BOTTOMRIGHT", f, "BOTTOM", 0, 6)
+    right:SetPoint("TOPLEFT", f, "TOP", 0, -62)
+    right:SetPoint("BOTTOMRIGHT", -6, 6)
+    if atlasExists("spellbook-background-evergreen-left") then
+        left:SetAtlas("spellbook-background-evergreen-left")
+        right:SetAtlas("spellbook-background-evergreen-right")
+    else
+        left:SetTexture("Interface\\Spellbook\\Spellbook-Page-1")
+        left:SetTexCoord(0, 0.86, 0, 0.9)
+        right:SetTexture("Interface\\Spellbook\\Spellbook-Page-2")
+        right:SetTexCoord(0, 0.86, 0, 0.9)
+    end
+end
+
+local function BuildBlizzardFrame(title)
+    local ok, f = pcall(CreateFrame, "Frame", "iMorphRackFrame", UIParent, "PortraitFrameTemplate")
+    if not ok then
+        f = CreateFrame("Frame", "iMorphRackFrame", UIParent, "BackdropTemplate")
+        f:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
+            tile = true, tileSize = 32, edgeSize = 24,
+            insets = { left = 6, right = 6, top = 6, bottom = 6 },
+        })
+        f.CloseButton = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        f.CloseButton:SetPoint("TOPRIGHT", -4, -4)
+    end
+    f.blizz = true
+    f.themeDark = false -- texte à l'encre sur le parchemin
+    f:SetSize(UI.WIDTH, UI.HEIGHT)
+    f:EnableMouse(true)
+    f:SetClampedToScreen(true)
+    -- la croix du modèle passe par HideUIPanel, bloqué en combat : on ferme nous-mêmes
+    if f.CloseButton then f.CloseButton:SetScript("OnClick", function() S.AnimateClose(f) end) end
+    f:HookScript("OnShow", function(self) S.AnimateOpen(self) end)
+
+    if f.SetTitle then
+        f:SetTitle(title)
+    else
+        local t = f.TitleText or (f.TitleContainer and f.TitleContainer.TitleText)
+        if not t then
+            t = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            t:SetPoint("TOP", 0, -5)
+        end
+        t:SetText(title)
+    end
+    local portrait = (f.PortraitContainer and f.PortraitContainer.portrait) or f.portrait
+    if not portrait then
+        portrait = f:CreateTexture(nil, "OVERLAY")
+        portrait:SetSize(58, 58)
+        portrait:SetPoint("TOPLEFT", -5, 7)
+    end
+    portrait:SetTexture(ns.ICON)
+    if portrait.SetMask then portrait:SetMask("Interface\\CharacterFrame\\TempPortraitAlphaMask") end
+    Parchment(f)
+
+    -- onglets icônes sous le titre, comme le grimoire
+    f.tabs = {}
+    for i, info in ipairs(ns.PAGES) do
+        local tab = CreateFrame("CheckButton", nil, f)
+        tab.info = info
+        tab:SetSize(34, 34)
+        tab:SetPoint("TOPLEFT", 70 + (i - 1) * 42, -26)
+        local icon = tab:CreateTexture(nil, "ARTWORK")
+        icon:SetAllPoints()
+        icon:SetTexture("Interface\\Icons\\" .. info.icon)
+        local border = tab:CreateTexture(nil, "OVERLAY")
+        border:SetPoint("TOPLEFT", -3, 3)
+        border:SetPoint("BOTTOMRIGHT", 3, -3)
+        border:SetTexture("Interface\\Buttons\\UI-Quickslot2")
+        border:SetTexCoord(0.2, 0.8, 0.2, 0.8)
+        tab:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+        tab:SetCheckedTexture("Interface\\Buttons\\CheckButtonHilight")
+        tab:GetCheckedTexture():SetBlendMode("ADD")
+        tab:SetScript("OnClick", function() SelectTab(info.key) end)
+        tab:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(L[info.label])
+            GameTooltip:Show()
+        end)
+        tab:SetScript("OnLeave", GameTooltip_Hide)
+        f.tabs[i] = tab
+    end
+
+    -- titre de page, comme l'en-tête du grimoire
+    f.pageTitle = f:CreateFontString(nil, "OVERLAY", "QuestFont_Huge")
+    f.pageTitle:SetPoint("TOPLEFT", 36, -76)
+    f.pageTitle:SetTextColor(S.Color(S.INK.text))
+    f.pageTitle:SetShadowOffset(0, 0)
+    local rule = f:CreateTexture(nil, "ARTWORK")
+    rule:SetPoint("TOPLEFT", 30, -104)
+    rule:SetPoint("TOPRIGHT", -30, -104)
+    rule:SetHeight(1)
+    rule:SetColorTexture(0.2, 0.12, 0.04, 0.8)
+
+    -- en haut à droite : thème, Bug, langue (sur la bande des onglets)
+    f.lang = UI.LanguageSelector(f)
+    f.lang:SetPoint("TOPRIGHT", -16, -32)
+    local bug = UI.BugButton(f)
+    bug:SetPoint("RIGHT", f.lang, "LEFT", -6, 0)
+    f.theme = UI.ThemeSelector(f)
+    f.theme:SetPoint("RIGHT", bug, "LEFT", -6, 0)
+
+    f.pageArea = CreateFrame("Frame", nil, f)
+    f.pageArea:SetPoint("TOPLEFT", 30, -116)
+    f.pageArea:SetPoint("BOTTOMRIGHT", -30, 48)
+    return f
+end
+
 -- avertissement si iMorph.exe n'est pas injecté
 local function BuildWarning(f)
     local warn = CreateFrame("Frame", nil, f)
-    warn:SetPoint("TOPLEFT", 1, -40)
-    warn:SetPoint("BOTTOMRIGHT", -1, 1)
+    if f.blizz then
+        warn:SetPoint("TOPLEFT", 10, -62)
+        warn:SetPoint("BOTTOMRIGHT", -10, 10)
+    else
+        warn:SetPoint("TOPLEFT", 1, -40)
+        warn:SetPoint("BOTTOMRIGHT", -1, 1)
+    end
     warn:SetFrameLevel(f:GetFrameLevel() + 50)
     warn:EnableMouse(true) -- bloque les clics sur la fenêtre derrière
     S.Rounded(warn, 12, { 0.03, 0.05, 0.09, 0.97 }, { 0.01, 0.02, 0.04, 0.98 }, { 0, 0, 0, 0 })
@@ -167,7 +298,7 @@ end
 local function BuildFooter(f)
     local status = CreateFrame("Frame", nil, f)
     status:SetSize(220, 20)
-    status:SetPoint("BOTTOMLEFT", 18, 14)
+    status:SetPoint("BOTTOMLEFT", f.blizz and 32 or 18, f.blizz and 18 or 14)
     local dot = status:CreateTexture(nil, "OVERLAY")
     dot:SetTexture(S.MEDIA .. "Dot")
     dot:SetSize(8, 8)
@@ -189,6 +320,7 @@ local function BuildFooter(f)
         local c = on and C.good or C.bad
         dot:SetVertexColor(S.Color(c))
         glow:SetVertexColor(c[1], c[2], c[3], 0.6)
+        if f.blizz then text:SetTextColor(S.Color(on and S.INK.good or S.INK.bad)) end
         text:SetText(on and L["iMorph detected"] or L["iMorph not detected"])
     end
     status:Update()
@@ -197,49 +329,62 @@ end
 
 local function Build()
     local getMeta = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-    local f = S.Window("iMorphRackFrame", UIParent, UI.WIDTH, UI.HEIGHT, "iMorph Rack")
+    local version = getMeta(ADDON, "Version") or "?"
+    local f
+    if S.BLIZZ then
+        -- un peu plus grand que le skin Forever : les pages gardent la même taille
+        UI.WIDTH, UI.HEIGHT = 740, 626
+        f = BuildBlizzardFrame("iMorph Rack (Forever)  |cff9d9d9dv" .. version .. "|r")
+    else
+        f = S.Window("iMorphRackFrame", UIParent, UI.WIDTH, UI.HEIGHT, "iMorph Rack")
+    end
     main = f
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)
     local pos = ns.db.pos
     if pos then f:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4]) else f:SetPoint("CENTER") end
-    S.Draggable(f, f.titleBar, function(self)
+    S.Draggable(f, f.blizz and f or f.titleBar, function(self)
         local p, _, rp, x, y = self:GetPoint(1)
         ns.db.pos = { p, rp, x, y }
     end)
     tinsert(UISpecialFrames, f:GetName())
 
-    local icon = S.Icon(f.titleBar, 24)
-    icon:SetPoint("LEFT", 12, 0)
-    icon.tex:SetTexture(ns.ICON)
-    icon.tex:SetTexCoord(0, 1, 0, 1)
-    f.title:ClearAllPoints()
-    f.title:SetPoint("LEFT", icon, "RIGHT", 10, 0)
+    if not f.blizz then
+        local icon = S.Icon(f.titleBar, 24)
+        icon:SetPoint("LEFT", 12, 0)
+        icon.tex:SetTexture(ns.ICON)
+        icon.tex:SetTexCoord(0, 1, 0, 1)
+        f.title:ClearAllPoints()
+        f.title:SetPoint("LEFT", icon, "RIGHT", 10, 0)
 
-    -- titre, "Forever", version, puis bouton Bug et langue à droite (comme les autres addons)
-    local forever = S.Text(f.titleBar, 15, "accent")
-    forever:SetPoint("LEFT", f.title, "RIGHT", 5, 0)
-    forever:SetText("Forever")
-    local version = S.Text(f.titleBar, 11, "muted")
-    version:SetPoint("BOTTOMLEFT", forever, "BOTTOMRIGHT", 6, 1)
-    version:SetText("v" .. (getMeta(ADDON, "Version") or "?"))
+        -- titre, "Forever", version, puis thème, Bug et langue à droite
+        local forever = S.Text(f.titleBar, 15, "accent")
+        forever:SetPoint("LEFT", f.title, "RIGHT", 5, 0)
+        forever:SetText("Forever")
+        local ver = S.Text(f.titleBar, 11, "muted")
+        ver:SetPoint("BOTTOMLEFT", forever, "BOTTOMRIGHT", 6, 1)
+        ver:SetText("v" .. version)
 
-    f.lang = UI.LanguageSelector(f.titleBar)
-    f.lang:SetPoint("RIGHT", f.close, "LEFT", -8, 0)
-    f.lang:SetFrameLevel(f.titleBar:GetFrameLevel() + 5)
-    local bug = UI.BugButton(f.titleBar)
-    bug:SetPoint("RIGHT", f.lang, "LEFT", -6, 0)
-    bug:SetFrameLevel(f.titleBar:GetFrameLevel() + 5)
+        f.lang = UI.LanguageSelector(f.titleBar)
+        f.lang:SetPoint("RIGHT", f.close, "LEFT", -8, 0)
+        f.lang:SetFrameLevel(f.titleBar:GetFrameLevel() + 5)
+        local bug = UI.BugButton(f.titleBar)
+        bug:SetPoint("RIGHT", f.lang, "LEFT", -6, 0)
+        bug:SetFrameLevel(f.titleBar:GetFrameLevel() + 5)
+        f.theme = UI.ThemeSelector(f.titleBar)
+        f.theme:SetPoint("RIGHT", bug, "LEFT", -6, 0)
+        f.theme:SetFrameLevel(f.titleBar:GetFrameLevel() + 5)
 
-    f.pageArea = CreateFrame("Frame", nil, f)
-    f.pageArea:SetPoint("TOPLEFT", 20, -92)
-    f.pageArea:SetPoint("BOTTOMRIGHT", -20, 46)
+        f.pageArea = CreateFrame("Frame", nil, f)
+        f.pageArea:SetPoint("TOPLEFT", 20, -92)
+        f.pageArea:SetPoint("BOTTOMRIGHT", -20, 46)
 
-    local rule = S.Rule(f, C.trim, 0.6)
-    rule:SetPoint("BOTTOMLEFT", 20, 40)
-    rule:SetPoint("BOTTOMRIGHT", -20, 40)
+        local rule = S.Rule(f, C.trim, 0.6)
+        rule:SetPoint("BOTTOMLEFT", 20, 40)
+        rule:SetPoint("BOTTOMRIGHT", -20, 40)
 
-    BuildTabs(f)
+        BuildTabs(f)
+    end
     BuildFooter(f)
 
     local valid = false

@@ -29,6 +29,7 @@ iMorph Rack is an interface only: it needs iMorph to be running and injected int
 - **Your own commands:** save named commands, edit them later. Several commands can go on one line, separated by `;`.
 - **Cosmetic only:** commands that touch gameplay (speed, flying, teleport, collisions and similar) are refused.
 - **Reset:** one button to undo every change.
+- **Two themes:** the custom animated Forever theme (default), or Blizzard Forever with the game's own frame, spellbook parchment pages and book-style ink text. Pick one in the title bar.
 - **English and French:** follows your game language, or pick one in the title bar.
 - **Report a bug:** the Bug button in the title bar gives you the Discord link, ready to copy.
 - **Minimap button:** click to open or close the window, drag to move it.
@@ -68,6 +69,7 @@ iMorph Rack n'est qu'une interface : iMorph doit être lancé et injecté dans l
 - **Vos commandes :** enregistrez des commandes nommées et modifiez-les ensuite. Plusieurs commandes peuvent tenir sur une ligne, séparées par `;`.
 - **Cosmétique uniquement :** les commandes qui touchent au gameplay (vitesse, vol, téléportation, collisions, etc.) sont refusées.
 - **Réinitialisation :** un bouton pour annuler tous les changements.
+- **Deux thèmes :** le thème Forever personnalisé et animé (par défaut), ou Blizzard Forever avec le cadre du jeu, les pages de parchemin du grimoire et un texte à l'encre façon livre. Choix dans la barre de titre.
 - **Français et anglais :** suit la langue de votre jeu, ou choisissez-la dans la barre de titre.
 - **Signaler un bug :** le bouton Bug de la barre de titre donne le lien Discord, prêt à copier.
 - **Bouton de minicarte :** clic pour ouvrir ou fermer la fenêtre, glisser pour le déplacer.

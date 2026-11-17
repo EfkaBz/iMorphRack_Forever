@@ -122,24 +122,79 @@ function S.FadeTo(region, alpha, dur, done)
         set = function(v) S.SetAlpha(region, v) end, done = done })
 end
 
--- Police (celle du jeu, avec une ombre douce) ------------------------------------
-local fonts = {}
-local function font(size)
-    if not fonts[size] then
-        local f = CreateFont("iMorphRackFont" .. size)
-        f:SetFont(STANDARD_TEXT_FONT, size, "")
-        f:SetShadowColor(0, 0, 0, 0.9)
-        f:SetShadowOffset(1, -1)
-        fonts[size] = f
+-- Thèmes ---------------------------------------------------------------------------
+-- "default" : skin Forever (ci-dessus) ; "blizzard" : interface Blizzard Forever (cadre portrait,
+-- pages de parchemin du grimoire, texte encre en police de livre, boutons et champs du jeu)
+S.BLIZZ = false
+local INK = {
+    text   = { 0.12, 0.07, 0.02, 1 },
+    muted  = { 0.34, 0.25, 0.14, 1 },
+    gold   = { 0.36, 0.12, 0.02, 1 },
+    accent = { 0.45, 0.15, 0.04, 1 },
+    good   = { 0.08, 0.38, 0.08, 1 },
+    bad    = { 0.6, 0.1, 0.05, 1 },
+}
+S.INK = INK
+
+function S.ApplyTheme(theme)
+    S.BLIZZ = theme == "blizzard"
+    if S.BLIZZ then
+        -- bordures et accents dorés à la Blizzard
+        C.trim   = { 0.62, 0.5, 0.22, 1 }
+        C.ring   = { 1, 0.82, 0, 1 }
+        C.accent = { 1, 0.82, 0, 1 }
+        C.gold   = { 1, 0.82, 0, 1 }
     end
-    return fonts[size]
+end
+
+-- le texte est-il sur un fond sombre ? (sinon : parchemin, texte à l'encre)
+function S.IsDark(frame)
+    if not S.BLIZZ then return true end
+    local f = frame
+    while f do
+        if f.themeDark ~= nil then return f.themeDark end
+        f = f:GetParent()
+    end
+    return true
+end
+
+-- Police (celle du jeu, avec une ombre douce ; police de livre sur le parchemin) ----
+local fonts = {}
+local function fontPath(kind)
+    local obj = kind == "title" and QuestTitleFont or kind == "book" and QuestFont
+    local path = obj and obj:GetFont()
+    return path or STANDARD_TEXT_FONT
+end
+local function font(size, kind)
+    kind = kind or "std"
+    local key = kind .. size
+    if not fonts[key] then
+        local f = CreateFont("iMorphRackFont" .. key)
+        f:SetFont(fontPath(kind), size, "")
+        if not f:GetFont() then f:SetFont(STANDARD_TEXT_FONT, size, "") end
+        if kind == "std" then
+            f:SetShadowColor(0, 0, 0, 0.9)
+            f:SetShadowOffset(1, -1)
+        else
+            f:SetShadowOffset(0, 0)
+        end
+        fonts[key] = f
+    end
+    return fonts[key]
 end
 S.Font = font
 
 function S.Text(parent, size, col, layer)
     local fs = parent:CreateFontString(nil, layer or "OVERLAY")
-    fs:SetFontObject(font(size or 13))
-    fs:SetTextColor(color(C[col or "text"]))
+    col = col or "text"
+    if S.BLIZZ and not S.IsDark(parent) then
+        fs._fk = col == "gold" and "title" or "book"
+        fs:SetFontObject(font(size or 13, fs._fk))
+        fs:SetTextColor(color(INK[col] or INK.text))
+    else
+        fs:SetFontObject(font(size or 13))
+        fs:SetTextColor(color(C[col]))
+    end
     fs:SetJustifyH("LEFT")
     return fs
 end
@@ -149,7 +204,7 @@ function S.FitText(fs, maxWidth, size)
     local r, g, b, a = fs:GetTextColor()
     fs:SetWidth(0)
     for s = size, 9, -1 do
-        fs:SetFontObject(font(s))
+        fs:SetFontObject(font(s, fs._fk))
         if fs:GetStringWidth() <= maxWidth then
             fs:SetTextColor(r, g, b, a)
             return
@@ -247,7 +302,34 @@ function S.Shadow(f, size, alpha, col)
 end
 
 -- boîte arrondie (rayon r) : dégradé vertical + bordure 1 px
+-- thème Blizzard : cadre sombre à bordure d'infobulle dorée (comme les listes du jeu)
+local function blizzBox(f)
+    f.themeDark = true
+    if not f.SetBackdrop and BackdropTemplateMixin then
+        Mixin(f, BackdropTemplateMixin)
+        f:HookScript("OnSizeChanged", f.OnBackdropSizeChanged)
+    end
+    if f.SetBackdrop then
+        f:SetBackdrop({
+            bgFile = WHITE,
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 },
+        })
+        f:SetBackdropColor(0.04, 0.03, 0.02, 0.92)
+        f.borders = {}
+        f.SetBorderColor = function(self, r, g, b, a) self:SetBackdropBorderColor(r, g, b, a or 1) end
+        f.borderBase = { 0.6, 0.5, 0.2, 0.85 }
+        f:SetBorderColor(color(f.borderBase))
+    else
+        S.Box(f, { 0.04, 0.03, 0.02, 0.92 }, { 0.6, 0.5, 0.2, 0.85 })
+    end
+    return f
+end
+S.BlizzBox = blizzBox
+
 function S.Rounded(f, r, top, bottom, border)
+    if S.BLIZZ then return blizzBox(f) end
     r, top, bottom = r or 12, top or C.bg1, bottom or C.bg2
     local cs = r * 16 / 12
     for _, t in pairs(slice9(f, MEDIA .. "RoundFill", 64, 16, cs, "BACKGROUND", -7)) do
@@ -268,6 +350,7 @@ end
 
 -- lumière cyan le long des bords intérieurs, qui respire lentement
 function S.EdgeGlow(f, depth, alpha)
+    if S.BLIZZ then return end
     depth, alpha = depth or 48, alpha or 0.2
     local pieces = slice9(f, MEDIA .. "RoundGlow", 128, 48, depth, "BACKGROUND", -5)
     for _, t in pairs(pieces) do t:SetVertexColor(0.25, 0.75, 1, alpha) end
@@ -322,6 +405,16 @@ end
 function S.RowHighlight(row)
     local hl = CreateFrame("Frame", nil, row)
     hl:SetAllPoints()
+    if S.BLIZZ then
+        -- surbrillance des listes du jeu
+        local t = hl:CreateTexture(nil, "BACKGROUND", nil, 1)
+        t:SetAllPoints()
+        t:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+        t:SetBlendMode("ADD")
+        t:SetVertexColor(1, 0.85, 0.5, 0.7)
+        S.HoverFade(row, hl)
+        return hl
+    end
     local wash = hl:CreateTexture(nil, "BACKGROUND", nil, 1)
     wash:SetAllPoints()
     gradient(wash, { 0.3, 0.8, 1, 0.16 }, { 0.3, 0.8, 1, 0 }, true)
@@ -425,7 +518,36 @@ function S.AnimateClose(f, dx, dy)
 end
 
 -- fenêtre arrondie en dégradé, halo, barre de titre avec un filet cyan
+-- thème Blizzard : boîte de dialogue du jeu (fond sombre, bordure dorée, croix du jeu)
+local function blizzWindow(name, parent, width, height, title)
+    local f = CreateFrame("Frame", name, parent or UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    f:SetSize(width, height)
+    f:EnableMouse(true)
+    f:SetClampedToScreen(true)
+    f.themeDark = true
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
+        tile = true, tileSize = 32, edgeSize = 24,
+        insets = { left = 6, right = 6, top = 6, bottom = 6 },
+    })
+    local bar = CreateFrame("Frame", nil, f)
+    bar:SetPoint("TOPLEFT", 6, -6)
+    bar:SetPoint("TOPRIGHT", -6, -6)
+    bar:SetHeight(32)
+    f.titleBar = bar
+    f.title = S.Text(bar, 15, "gold")
+    f.title:SetPoint("LEFT", 10, 0)
+    f.title:SetText(title or "")
+    f.close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    f.close:SetPoint("TOPRIGHT", -2, -2)
+    f.close:SetScript("OnClick", function() S.AnimateClose(f) end)
+    f:HookScript("OnShow", function(self) S.AnimateOpen(self) end)
+    return f
+end
+
 function S.Window(name, parent, width, height, title)
+    if S.BLIZZ then return blizzWindow(name, parent, width, height, title) end
     local f = CreateFrame("Frame", name, parent or UIParent)
     f:SetSize(width, height)
     f:EnableMouse(true)
@@ -473,24 +595,45 @@ end
 function S.Section(parent, text)
     local h = CreateFrame("Frame", nil, parent)
     h:SetHeight(22)
+    -- sur le parchemin : encre brune, police de titre du livre
+    local ink = S.BLIZZ and not S.IsDark(parent)
+    local lineCol = ink and INK.gold or C.ring
     local dot = h:CreateTexture(nil, "ARTWORK")
     dot:SetSize(4, 4)
     dot:SetPoint("LEFT", 0, 2)
-    dot:SetColorTexture(color(C.gold))
-    h.label = S.Text(h, 13, "gold")
+    dot:SetColorTexture(color(ink and INK.gold or C.gold))
+    h.label = S.Text(h, ink and 16 or 13, "gold")
     h.label:SetPoint("LEFT", dot, "RIGHT", 7, 2)
     h.label:SetText(text or "")
     h.right = S.Text(h, 11, "muted")
     h.right:SetPoint("RIGHT", 0, 2)
     local line = h:CreateTexture(nil, "BORDER")
     line:SetPoint("BOTTOMLEFT"); line:SetPoint("BOTTOMRIGHT"); line:SetHeight(1)
-    gradient(line, { C.ring[1], C.ring[2], C.ring[3], 0.7 }, { C.ring[1], C.ring[2], C.ring[3], 0 }, true)
+    gradient(line, { lineCol[1], lineCol[2], lineCol[3], 0.7 }, { lineCol[1], lineCol[2], lineCol[3], 0 }, true)
     return h
 end
 
 -- Boutons --------------------------------------------------------------------------
 -- dégradé + vernis ; survol = la bordure glisse vers le cyan + lueur intérieure
+-- thème Blizzard : bouton rouge du jeu
+local function blizzButton(parent, text, width, height, onClick)
+    local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    b:SetSize(width or 120, height or 24)
+    local setText = b.SetText
+    setText(b, text or " ")
+    b.text = b:GetFontString()
+    b.fitWidth = (width or 120) - 10
+    function b:SetText(t)
+        setText(self, t)
+        S.FitText(self.text, self.fitWidth, 12)
+    end
+    b:SetText(text or "")
+    b:SetScript("OnClick", onClick)
+    return b
+end
+
 function S.Button(parent, text, width, height, onClick, primary)
+    if S.BLIZZ then return blizzButton(parent, text, width, height, onClick) end
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(width or 120, height or 24)
     S.Box(b, primary and { C.primary1, C.primary2 } or { C.btn1, C.btn2 }, primary and C.ring or C.trim)
@@ -524,7 +667,32 @@ end
 
 -- Champ de saisie ------------------------------------------------------------------
 -- puits sombre, bordure qui s'allume au focus, lueur intérieure, texte d'aide
+-- thème Blizzard : champ de saisie du jeu (texte à l'encre sur le parchemin)
+local function blizzEditBox(parent, width, height, placeholder)
+    local e = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    e:SetSize((width or 80) - 6, height or 20)
+    e:SetAutoFocus(false)
+    if not S.IsDark(parent) then
+        e:SetFontObject(font(13, "book"))
+        e:SetTextColor(color(INK.text))
+    end
+    e.hint = S.Text(e, 12, "muted")
+    e.hint:SetPoint("LEFT", 1, 0)
+    e.hint:SetPoint("RIGHT", -4, 0)
+    e.hint:SetWordWrap(false)
+    e.hint:SetText(placeholder or "")
+    local function hint() e.hint:SetShown(e:GetText() == "" and not e:HasFocus()) end
+    e:SetScript("OnEscapePressed", e.ClearFocus)
+    e:HookScript("OnEditFocusGained", hint)
+    e:HookScript("OnEditFocusLost", hint)
+    e:HookScript("OnTextChanged", hint)
+    function e:SetPlaceholder(t) self.hint:SetText(t) end
+    hint()
+    return e
+end
+
 function S.EditBox(parent, width, height, placeholder)
+    if S.BLIZZ then return blizzEditBox(parent, width, height, placeholder) end
     local e = CreateFrame("EditBox", nil, parent)
     e:SetSize(width or 80, height or 22)
     e:SetAutoFocus(false)

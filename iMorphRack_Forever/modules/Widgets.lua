@@ -162,6 +162,21 @@ function UI.BugButton(parent)
     return b
 end
 
+-- menu des thèmes : skin Forever (par défaut) ou interface Blizzard Forever ; rechargement
+function UI.ThemeSelector(parent)
+    local options = {
+        { "default", "Forever", L["Forever (default)"] },
+        { "blizzard", "Blizzard Forever", "Blizzard Forever" },
+    }
+    return S.Dropdown(parent, 130, 180, options, function() return ns.db.theme or "default" end, function(v)
+        if (ns.db.theme or "default") == v then return end
+        UI.Confirm(L["The interface will be reloaded to apply the theme."], function()
+            ns.db.theme = v
+            ReloadUI()
+        end)
+    end, { tooltip = L["Theme"] })
+end
+
 -- menu des langues (Auto + chaque langue) ; changer de langue demande un rechargement
 UI.LANGS = {
     { "enUS", "EN", "English" },

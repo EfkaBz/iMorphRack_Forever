@@ -11,6 +11,7 @@ f:SetScript("OnEvent", function(_, _, name)
     iMorphRackDB.chars = iMorphRackDB.chars or {}
     ns.db = iMorphRackDB
     ns.ApplyLanguage(ns.db.lang)
+    ns.Skin.ApplyTheme(ns.db.theme or "default")
     f:UnregisterEvent("ADDON_LOADED")
 end)
 
