@@ -50,7 +50,7 @@ local function BuildPresetsPage(p)
     saveBtn:SetPoint("LEFT", name, "RIGHT", 10, 0)
     local reapply = Button(p, L["Reapply"], 120, 24, function()
         local text, count = ns.LookCommands(ns.CharDB().look)
-        if count > 0 then ns.Run(text) end
+        if count > 0 then ns.ApplyLook(text) end
     end)
     reapply:SetPoint("LEFT", saveBtn, "RIGHT", 8, 0)
     UI.Tooltip(reapply, L["Reapply"], L["Sends the current look again (e.g. after a loading screen)."])

@@ -81,10 +81,23 @@ ns.APPEARANCE = {
     { cmd = ".scale",    label = "Character scale" },
     { cmd = ".mount",    label = "Mount (display ID)" },
     { cmd = ".itemset",  label = "Item set (ID)" },
-    { cmd = ".skin",     label = "Skin" },
-    { cmd = ".face",     label = "Face" },
-    { cmd = ".hair",     label = "Hair style" },
-    { cmd = ".haircolor",label = "Hair color" },
-    { cmd = ".features", label = "Facial features" },
     { cmd = ".title",    label = "Title (ID)" },
+}
+
+-- Options de personnalisation mises en avant en tête du menu (le reste suit, trié)
+-- Elles dépendent de la race affichée : iMorph refuse celles que la race n'a pas.
+ns.CUSTOMIZATION_COMMON = {
+    { "skincolor",  "Skin color" },
+    { "face",       "Face" },
+    { "hairstyle",  "Hair style" },
+    { "hair",       "Hair (older races)" },
+    { "haircolor",  "Hair color" },
+    { "facialhair", "Facial hair" },
+    { "features",   "Facial features" },
+    { "eyecolor",   "Eye color" },
+    { "earrings",   "Earrings" },
+    { "piercings",  "Piercings" },
+    { "tattoo",     "Tattoo" },
+    { "horns",      "Horns" },
+    { "tusks",      "Tusks" },
 }

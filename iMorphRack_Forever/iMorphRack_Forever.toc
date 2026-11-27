@@ -3,7 +3,7 @@
 ## Notes: Interface for iMorph cosmetic commands (race, gender, morph, items, mounts) + custom commands, presets
 ## Notes-frFR: Interface pour les commandes cosmétiques iMorph (race, genre, morph, objets, montures) + commandes personnalisées, presets
 ## Author: Daeler
-## Version: 1.2.0
+## Version: 1.2.1
 ## IconTexture: Interface\AddOns\iMorphRack_Forever\media\icon
 ## X-Category: Miscellaneous
 ## Category: Daeler Addons
